@@ -63,7 +63,7 @@
   <footer>Starter app • Edit <code>recipes</code> array in the JS to add more dishes.</footer>
 
   <script>
-    // ---------- DATA: replace/extend this array or load from an external JSON file ----------
+    // ---------- DATA ----------
     const recipes = [
       {"name":"Omelette","ingredients":["egg","salt","pepper","oil"],"steps":"Beat eggs with salt & pepper. Heat a pan with oil, pour mixture, cook both sides, serve hot."},
       {"name":"Fried Rice","ingredients":["rice","egg","vegetables","soy sauce"],"steps":"Stir-fry vegetables, scramble egg, add cooked rice and soy sauce. Toss until heated."},
@@ -88,7 +88,7 @@
     const modalSteps = document.getElementById('modal-steps');
     const closeBtn = document.getElementById('close');
 
-    // render initial list (all recipes)
+    // render list
     function renderList(list){
       resultsEl.innerHTML = '';
       if(!list || list.length === 0){
@@ -97,48 +97,56 @@
       }
       noEl.style.display = 'none';
       const html = list.map((r, i) => {
-        const tags = r.ingredients.slice(0,4).map(t=><span class="tag">${escapeHtml(t)}</span>).join(' ');
-        return \n          <div class="card" data-index="${i}" tabindex="0">\n            <h3>${escapeHtml(r.name)}</h3>\n            <div class="tags">${tags}</div>\n          </div>;
+        const tags = r.ingredients.slice(0,4).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join(' ');
+        return `
+          <div class="card" data-index="${i}" tabindex="0">
+            <h3>${escapeHtml(r.name)}</h3>
+            <div class="tags">${tags}</div>
+          </div>
+        `;
       }).join('\n');
       resultsEl.innerHTML = html;
     }
 
-    // Search logic: accepts single or multiple tokens (separated by comma/plus/space). Case-insensitive.
+    // search
     function searchRecipes(query){
       const q = (query || '').toLowerCase().trim();
       if(!q) return recipes.slice();
       const tokens = q.split(/[,+\s]+/).filter(Boolean);
       return recipes.filter(r => {
         const ingr = r.ingredients.map(x=>x.toLowerCase());
-        // every token must be present in at least one ingredient (substring match)
         return tokens.every(t => ingr.some(i => i.includes(t)));
       });
     }
 
-    // show modal
+    // modal
     function openRecipe(r){
       modalTitle.textContent = r.name;
-      modalIngredients.innerHTML = r.ingredients.map(i=><li>${escapeHtml(i)}</li>).join('\n');
+      modalIngredients.innerHTML = r.ingredients.map(i => `<li>${escapeHtml(i)}</li>`).join('\n');
       modalSteps.textContent = r.steps;
       modal.classList.remove('hidden');
     }
 
-    // utility: escape html
+    // escape html
     function escapeHtml(s){
-      return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#39;");
+      return String(s)
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'","&#39;");
     }
 
-    // event delegation for clicking recipe cards
+    // event delegation
     resultsEl.addEventListener('click', e => {
       const card = e.target.closest('.card');
       if(!card) return;
       const idx = Number(card.dataset.index);
-      // find the recipe from the currently visible list
       const shown = searchRecipes(searchInput.value);
       if(shown[idx]) openRecipe(shown[idx]);
     });
 
-    // keyboard accessibility: Enter opens focused card
+    // keyboard accessibility
     resultsEl.addEventListener('keydown', e => {
       if(e.key === 'Enter'){
         const card = e.target.closest('.card');
@@ -149,27 +157,18 @@
     closeBtn.addEventListener('click', ()=> modal.classList.add('hidden'));
     modal.addEventListener('click', (e)=>{ if(e.target === modal) modal.classList.add('hidden') });
 
-    // wire search box
+    // search wiring
     function doSearch(){
       const q = searchInput.value;
       const results = searchRecipes(q);
       renderList(results);
     }
     searchBtn.addEventListener('click', doSearch);
-    searchInput.addEventListener('input', () => {
-      // live search
-      doSearch();
-    });
+    searchInput.addEventListener('input', doSearch);
+    searchInput.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') doSearch(); });
 
     // initial render
     renderList(recipes);
-
-    // Optional: press Enter in search input to run search
-    searchInput.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') doSearch(); });
-
-    // ---------- Helpful note for beginners ----------
-    // To add more recipes: edit the recipes array above. You can also move this data to a separate recipes.json file
-    // and fetch it with fetch('recipes.json').then(r=>r.json()).then(data=>{ recipes = data; renderList(recipes); }).
   </script>
 </body>
 </html>
