@@ -1,1 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ingredient → Recipes (Starter)</title>
+  <style>
+    :root{--bg:#fff;--card:#ffffff;--muted:#666;--accent:#e83e8c}
+    *{box-sizing:border-box}
+    body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial; background:linear-gradient(180deg,#fff 0%, #fffaf8 100%); color:#111; margin:0; padding:24px}
+    header{max-width:900px;margin:0 auto 20px;text-align:center}
+    h1{margin:0 0 6px;font-size:26px}
+    p.lead{margin:0 0 16px;color:var(--muted)}
+    .search-row{display:flex;gap:10px;justify-content:center;margin-top:10px}
+    input#search{width:60%;min-width:220px;padding:10px 12px;border-radius:12px;border:1px solid #eee;box-shadow:0 1px 3px rgba(0,0,0,0.04);font-size:16px}
+    button#searchBtn{padding:10px 14px;border-radius:12px;border:none;background:var(--accent);color:white;font-weight:600;cursor:pointer}
+    main{max-width:1000px;margin:14px auto}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+    .card{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.06);cursor:pointer;transition:transform .15s ease}
+    .card:hover{transform:translateY(-6px)}
+    .card h3{margin:0 0 6px;font-size:18px}
+    .tags{display:flex;flex-wrap:wrap;gap:6px}
+    .tag{font-size:12px;padding:6px 8px;border-radius:999px;background:#f1f1f1;color:#333}
+    .no{display:none;text-align:center;padding:40px;color:var(--muted)}
+    /* modal */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;padding:20px}
+    .modal-content{width:100%;max-width:720px;background:white;padding:20px;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:auto;max-height:90vh}
+    .modal-content h2{margin-top:0}
+    .close-btn{background:#eee;border:0;padding:8px 12px;border-radius:8px;cursor:pointer}
+    .hidden{display:none}
+    footer{max-width:900px;margin:26px auto;color:var(--muted);font-size:13px;text-align:center}
+    @media (max-width:520px){input#search{width:100%}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Ingredient → Recipes</h1>
+    <p class="lead">Type an ingredient (for example <em>egg</em>) and see all dishes that include it. Click a card to read the recipe.</p>
+    <div class="search-row">
+      <input id="search" placeholder="Type an ingredient, e.g. egg" aria-label="search ingredient" />
+      <button id="searchBtn">Search</button>
+    </div>
+  </header>
 
+  <main>
+    <div id="results" class="grid"></div>
+    <div id="no-results" class="no">No recipes found. Try another ingredient.</div>
+  </main>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h2 id="modal-title"></h2>
+        <button id="close" class="close-btn">Close</button>
+      </div>
+      <h3>Ingredients</h3>
+      <ul id="modal-ingredients"></ul>
+      <h3>Steps</h3>
+      <div id="modal-steps" style="white-space:pre-wrap;line-height:1.5"></div>
+    </div>
+  </div>
+
+  <footer>Starter app • Edit <code>recipes</code> array in the JS to add more dishes.</footer>
+
+  <script>
+    // ---------- DATA: replace/extend this array or load from an external JSON file ----------
+    const recipes = [
+      {"name":"Omelette","ingredients":["egg","salt","pepper","oil"],"steps":"Beat eggs with salt & pepper. Heat a pan with oil, pour mixture, cook both sides, serve hot."},
+      {"name":"Fried Rice","ingredients":["rice","egg","vegetables","soy sauce"],"steps":"Stir-fry vegetables, scramble egg, add cooked rice and soy sauce. Toss until heated."},
+      {"name":"Pancakes","ingredients":["egg","flour","milk","sugar"],"steps":"Mix egg, flour, milk and sugar into batter. Pour on hot pan, cook until bubbles form, flip and cook other side."},
+      {"name":"Egg Bhurji (Indian scrambled)","ingredients":["egg","onion","tomato","turmeric","salt","oil"],"steps":"Sauté onions, tomatoes, add spices, pour beaten eggs, stir until cooked. Serve with roti."},
+      {"name":"French Toast","ingredients":["egg","bread","milk","sugar","butter"],"steps":"Whisk egg+milk+sugar. Dip bread, cook on buttered pan until golden both sides."},
+      {"name":"Shakshuka","ingredients":["egg","tomato","onion","pepper","spices"],"steps":"Cook onions, peppers, add tomatoes & spices to make sauce. Make small wells and crack eggs, cook until set."},
+      {"name":"Egg Salad","ingredients":["egg","mayonnaise","mustard","salt","pepper"],"steps":"Boil eggs, chop and mix with mayo, mustard and seasoning. Serve chilled."},
+      {"name":"Egg Curry","ingredients":["egg","onion","tomato","curry powder","oil"],"steps":"Prepare a spiced onion-tomato gravy. Add boiled eggs into gravy; simmer 5-7 minutes."},
+      {"name":"Egg Fried Noodles","ingredients":["noodles","egg","soy sauce","vegetables"],"steps":"Boil noodles. Stir-fry veggies, add egg and scramble, toss noodles with soy sauce."},
+      {"name":"Boiled Egg & Avocado Toast","ingredients":["egg","bread","avocado","salt"],"steps":"Toast bread, mash avocado on toast, slice boiled egg on top, season with salt & pepper."}
+    ];
+
+    // ---------- UI references ----------
+    const resultsEl = document.getElementById('results');
+    const noEl = document.getElementById('no-results');
+    const searchInput = document.getElementById('search');
+    const searchBtn = document.getElementById('searchBtn');
+    const modal = document.getElementById('modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalIngredients = document.getElementById('modal-ingredients');
+    const modalSteps = document.getElementById('modal-steps');
+    const closeBtn = document.getElementById('close');
+
+    // render initial list (all recipes)
+    function renderList(list){
+      resultsEl.innerHTML = '';
+      if(!list || list.length === 0){
+        noEl.style.display = 'block';
+        return;
+      }
+      noEl.style.display = 'none';
+      const html = list.map((r, i) => {
+        const tags = r.ingredients.slice(0,4).map(t=><span class="tag">${escapeHtml(t)}</span>).join(' ');
+        return \n          <div class="card" data-index="${i}" tabindex="0">\n            <h3>${escapeHtml(r.name)}</h3>\n            <div class="tags">${tags}</div>\n          </div>;
+      }).join('\n');
+      resultsEl.innerHTML = html;
+    }
+
+    // Search logic: accepts single or multiple tokens (separated by comma/plus/space). Case-insensitive.
+    function searchRecipes(query){
+      const q = (query || '').toLowerCase().trim();
+      if(!q) return recipes.slice();
+      const tokens = q.split(/[,+\s]+/).filter(Boolean);
+      return recipes.filter(r => {
+        const ingr = r.ingredients.map(x=>x.toLowerCase());
+        // every token must be present in at least one ingredient (substring match)
+        return tokens.every(t => ingr.some(i => i.includes(t)));
+      });
+    }
+
+    // show modal
+    function openRecipe(r){
+      modalTitle.textContent = r.name;
+      modalIngredients.innerHTML = r.ingredients.map(i=><li>${escapeHtml(i)}</li>).join('\n');
+      modalSteps.textContent = r.steps;
+      modal.classList.remove('hidden');
+    }
+
+    // utility: escape html
+    function escapeHtml(s){
+      return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#39;");
+    }
+
+    // event delegation for clicking recipe cards
+    resultsEl.addEventListener('click', e => {
+      const card = e.target.closest('.card');
+      if(!card) return;
+      const idx = Number(card.dataset.index);
+      // find the recipe from the currently visible list
+      const shown = searchRecipes(searchInput.value);
+      if(shown[idx]) openRecipe(shown[idx]);
+    });
+
+    // keyboard accessibility: Enter opens focused card
+    resultsEl.addEventListener('keydown', e => {
+      if(e.key === 'Enter'){
+        const card = e.target.closest('.card');
+        if(card) card.click();
+      }
+    });
+
+    closeBtn.addEventListener('click', ()=> modal.classList.add('hidden'));
+    modal.addEventListener('click', (e)=>{ if(e.target === modal) modal.classList.add('hidden') });
+
+    // wire search box
+    function doSearch(){
+      const q = searchInput.value;
+      const results = searchRecipes(q);
+      renderList(results);
+    }
+    searchBtn.addEventListener('click', doSearch);
+    searchInput.addEventListener('input', () => {
+      // live search
+      doSearch();
+    });
+
+    // initial render
+    renderList(recipes);
+
+    // Optional: press Enter in search input to run search
+    searchInput.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') doSearch(); });
+
+    // ---------- Helpful note for beginners ----------
+    // To add more recipes: edit the recipes array above. You can also move this data to a separate recipes.json file
+    // and fetch it with fetch('recipes.json').then(r=>r.json()).then(data=>{ recipes = data; renderList(recipes); }).
+  </script>
+</body>
+</html>
